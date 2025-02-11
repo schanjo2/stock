@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주식 가격 차트</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>주식 가격 비교 차트</h1>
+    <label for="symbol1">종목 1:</label>
+    <input type="text" id="symbol1" placeholder="예: AAPL">
+    <label for="symbol2">종목 2:</label>
+    <input type="text" id="symbol2" placeholder="예: MSFT">
+    <label for="startDate">시작 날짜:</label>
+    <input type="date" id="startDate">
+    <label for="endDate">종료 날짜:</label>
+    <input type="date" id="endDate">
+    <button id="fetchData">차트 가져오기</button>
+    <canvas id="stockChart"></canvas>
+    
+    <script>
+        async function fetchStockData(symbol, startDate, endDate) {
+            const apiKey = 'YOUR_API_KEY';
+            const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${apiKey}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            const timeSeries = data["Time Series (Daily)"];
+            return Object.keys(timeSeries)
+                .filter(date => date >= startDate && date <= endDate)
+                .map(date => ({ date, price: parseFloat(timeSeries[date]["4. close"]) }));
+        }
+
+        async function drawChart(symbol1, symbol2, startDate, endDate) {
+            const data1 = await fetchStockData(symbol1, startDate, endDate);
+            const data2 = await fetchStockData(symbol2, startDate, endDate);
+
+            const labels = data1.map(entry => entry.date).reverse();
+            const prices1 = data1.map(entry => entry.price).reverse();
+            const prices2 = data2.map(entry => entry.price).reverse();
+            const priceRatio = prices1.map((p1, idx) => ((p1 - prices2[idx]) / prices2[idx]) * 100);
+
+            const ctx = document.getElementById('stockChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: `${symbol1} 가격`,
+                            data: prices1,
+                            borderColor: 'blue',
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: `${symbol2} 가격`,
+                            data: prices2,
+                            borderColor: 'red',
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: '가격 비율 (%)',
+                            data: priceRatio,
+                            borderColor: 'green',
+                            yAxisID: 'y2',
+                            borderDash: [5, 5]
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y1: {
+                            type: 'linear',
+                            position: 'left'
+                        },
+                        y2: {
+                            type: 'linear',
+                            position: 'right',
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        document.getElementById('fetchData').addEventListener('click', () => {
+            const symbol1 = document.getElementById('symbol1').value;
+            const symbol2 = document.getElementById('symbol2').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            drawChart(symbol1, symbol2, startDate, endDate);
+        });
+    </script>
+</body>
+</html>

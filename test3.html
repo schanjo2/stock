@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>KRX vs 국제 금 시세 5년 비교 차트</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> </head>
+<body>
+<canvas id="myChart"></canvas>
+<script>
+const ctx = document.getElementById('myChart').getContext('2d');
+
+// KRX 금 시세 데이터 가져오기 (한국금거래소 API 사용)
+async function getKrxData() {
+    try {
+        const response = await axios.get('https://www.koreagoldx.co.kr/api/v1/price/recent?metal=au&unit=g&date=20200101-20241231'); // 5년치 데이터
+        const data = response.data.data;
+        const labels = data.map(item => item.date);
+        const prices = data.map(item => item.price);
+        return { labels, prices };
+    } catch (error) {
+        console.error('KRX 금 시세 데이터 가져오기 실패:', error);
+        return { labels: [], prices: [] };
+    }
+}
+
+// 국제 금 시세 데이터 가져오기 (Open Gold Data API 사용)
+async function getInternationalData() {
+    try {
+        const response = await axios.get('https://api.open-gold-data.com/api/v1/latest/XAU/USD?date=2020-01-01&end_date=2024-12-31'); // 5년치 데이터
+        const data = response.data.data;
+        const labels = Object.keys(data);
+        const prices = Object.values(data).map(item => item.price);
+        return { labels, prices };
+    } catch (error) {
+        console.error('국제 금 시세 데이터 가져오기 실패:', error);
+        return { labels: [], prices: [] };
+    }
+}
+
+// 데이터 가져와서 차트 그리기
+async function drawChart() {
+    const krxData = await getKrxData();
+    const internationalData = await getInternationalData();
+
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: krxData.labels, // 날짜
+            datasets: [{
+                label: 'KRX 금 시세 (원/g)',
+                data: krxData.prices,
+                borderColor: 'blue',
+                borderWidth: 1,
+                fill: false
+            }, {
+                label: '국제 금 시세 (USD/oz)',
+                data: internationalData.prices,
+                borderColor: 'red',
+                borderWidth: 1,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            title: {
+                display: true,
+                text: 'KRX vs 국제 금 시세 5년 비교'
+            },
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: '날짜'
+                    }
+                },
+                y: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: '가격'
+                    }
+                }
+            }
+        }
+    });
+}
+
+drawChart();
+</script>
+</body>
+</html>
